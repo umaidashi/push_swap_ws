@@ -203,6 +203,8 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
     int size;
     int min;
     int max;
+    int dist;
+    t_node *current;
 
     size = stack_a->size;
     if (size <= 1 || is_sorted_range(stack_a, size))
@@ -220,34 +222,34 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
     }
 
     // 4または5要素の場合
-    get_min_max(stack_a, size, &min, &max);
-
-    // 最小値をスタックBに移動
     while (stack_a->size > 3)
     {
-        // スタックAの先頭が最小値または最大値の場合
-        if (stack_a->head->value == min)
-        {
-            pb(stack_a, stack_b, 1);
-            min = get_stack_min(stack_a);
-        }
-        else
-        {
-            // 最小値までの距離を計算
-            int dist = 0;
-            t_node *current = stack_a->head;
-            while (current && current->value != min)
-            {
-                dist++;
-                current = current->next;
-            }
+        // 最小値を見つける
+        min = get_stack_min(stack_a);
+        dist = 0;
+        current = stack_a->head;
 
-            // 最短経路で最小値を先頭に移動
-            if (dist <= stack_a->size / 2)
-                ra(stack_a, 1);
-            else
-                rra(stack_a, 1);
+        // 最小値までの距離を計算
+        while (current && current->value != min)
+        {
+            dist++;
+            current = current->next;
         }
+
+        // 最小値が先頭にある場合はpush
+        if (dist == 0)
+            pb(stack_a, stack_b, 1);
+        // 最小値が2番目にある場合はswap
+        else if (dist == 1)
+        {
+            sa(stack_a, 1);
+            pb(stack_a, stack_b, 1);
+        }
+        // それ以外は最短経路で回転
+        else if (dist <= stack_a->size / 2)
+            ra(stack_a, 1);
+        else
+            rra(stack_a, 1);
     }
 
     // 残りの3要素をソート
