@@ -46,6 +46,7 @@ int     get_stack_min(t_stack *stack);
 int     get_stack_max(t_stack *stack);
 int     get_median(t_stack *stack, int len);
 int     is_sorted_range(t_stack *stack, int len);
+int     find_min_pos(t_stack *stack);
 
 // インデックス変換
 void    convert_to_indices(t_stack *stack);

@@ -206,12 +206,17 @@ void chunk_sort(t_stack *stack_a, t_stack *stack_b)
     if (is_sorted_range(stack_a, size))
         return;
     
+    // 5以下のサイズは専用の関数で処理
+    if (size <= 5)
+    {
+        sort_five_or_less(stack_a, stack_b);
+        return;
+    }
+    
     // インデックスに変換
     convert_to_indices(stack_a);
     
-    if (size <= 5)
-        sort_five_or_less(stack_a, stack_b);
-    else if (size <= 100)
+    if (size <= 100)
         sort_medium(stack_a, stack_b);
     else
         sort_large(stack_a, stack_b);

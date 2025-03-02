@@ -128,30 +128,28 @@ int get_stack_max(t_stack *stack)
 int get_median(t_stack *stack, int len)
 {
     int *arr;
-    int i;
+    int i, j, median;
     t_node *current;
-    int median;
 
-    if (!stack || !stack->head || len <= 0)
+    if (!stack || stack->size < len || len <= 0)
         return (0);
+
     arr = (int *)malloc(sizeof(int) * len);
     if (!arr)
         return (0);
-    
+
     current = stack->head;
-    i = 0;
-    while (i < len && current)
+    for (i = 0; i < len && current; i++)
     {
         arr[i] = current->value;
         current = current->next;
-        i++;
     }
 
     // 挿入ソートで配列をソート
     for (i = 1; i < len; i++)
     {
         int key = arr[i];
-        int j = i - 1;
+        j = i - 1;
         while (j >= 0 && arr[j] > key)
         {
             arr[j + 1] = arr[j];
@@ -198,124 +196,37 @@ void sort_three(t_stack *stack)
         rra(stack, 1);
 }
 
-// 最小値と最大値の位置を同時に探す補助関数
-static void find_min_max_pos(t_stack *stack, int *min_pos, int *max_pos)
+// スタック内の最小値の位置を見つける
+int find_min_pos(t_stack *stack)
 {
     t_node *current;
     int min;
-    int max;
+    int min_pos;
     int pos;
 
     if (!stack || !stack->head)
-        return;
+        return (0);
     current = stack->head;
     min = current->value;
-    max = current->value;
-    *min_pos = 0;
-    *max_pos = 0;
+    min_pos = 0;
     pos = 0;
     while (current)
     {
         if (current->value < min)
         {
             min = current->value;
-            *min_pos = pos;
-        }
-        if (current->value > max)
-        {
-            max = current->value;
-            *max_pos = pos;
+            min_pos = pos;
         }
         pos++;
         current = current->next;
     }
-}
-
-// スタックの最適な回転方向を決定する補助関数
-static void rotate_optimal(t_stack *stack, int pos1, int pos2)
-{
-    int size;
-    int mid;
-
-    size = stack->size;
-    mid = size / 2;
-
-    // 両方の位置が中央より上にある場合は上から回転
-    if (pos1 <= mid && pos2 <= mid)
-    {
-        while (pos1 > 0)
-        {
-            ra(stack, 1);
-            pos1--;
-            if (pos2 > 0)
-                pos2--;
-        }
-        while (pos2 > 0)
-        {
-            ra(stack, 1);
-            pos2--;
-        }
-    }
-    // 両方の位置が中央より下にある場合は下から回転
-    else if (pos1 > mid && pos2 > mid)
-    {
-        while (pos1 < size)
-        {
-            rra(stack, 1);
-            pos1++;
-            if (pos2 < size)
-                pos2++;
-        }
-        while (pos2 < size)
-        {
-            rra(stack, 1);
-            pos2++;
-        }
-    }
-    // それ以外の場合は近い方を先に移動
-    else
-    {
-        int cost1 = pos1 <= mid ? pos1 : size - pos1;
-        int cost2 = pos2 <= mid ? pos2 : size - pos2;
-
-        if (cost1 <= cost2)
-        {
-            if (pos1 <= mid)
-                while (pos1-- > 0)
-                    ra(stack, 1);
-            else
-                while (pos1++ < size)
-                    rra(stack, 1);
-            if (pos2 <= mid)
-                while (pos2-- > 0)
-                    ra(stack, 1);
-            else
-                while (pos2++ < size)
-                    rra(stack, 1);
-        }
-        else
-        {
-            if (pos2 <= mid)
-                while (pos2-- > 0)
-                    ra(stack, 1);
-            else
-                while (pos2++ < size)
-                    rra(stack, 1);
-            if (pos1 <= mid)
-                while (pos1-- > 0)
-                    ra(stack, 1);
-            else
-                while (pos1++ < size)
-                    rra(stack, 1);
-        }
-    }
+    return (min_pos);
 }
 
 void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
 {
     int size;
     int min_pos;
-    int max_pos;
 
     size = stack_a->size;
     if (size <= 1 || is_sorted_range(stack_a, size))
@@ -332,25 +243,33 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
         return;
     }
 
-    // 4または5要素の場合
-    while (stack_a->size > 3)
+    // 4または5要素の場合は、最小値をスタックBに移動して、残りをソート
+    while (size > 3)
     {
-        find_min_max_pos(stack_a, &min_pos, &max_pos);
-        // 最小値と最大値の位置に基づいて最適な回転を実行
-        rotate_optimal(stack_a, min_pos, max_pos);
+        // 最小値の位置を見つける
+        min_pos = find_min_pos(stack_a);
         
-        // スタックBに最小値と最大値を移動
+        // 最小値をスタックの先頭に移動
+        if (min_pos <= size / 2)
+        {
+            while (min_pos-- > 0)
+                ra(stack_a, 1);
+        }
+        else
+        {
+            while (min_pos++ < size)
+                rra(stack_a, 1);
+        }
+        
+        // 最小値をスタックBに移動
         pb(stack_a, stack_b, 1);
-        if (stack_a->size > 3)
-            pb(stack_a, stack_b, 1);
+        size--;
     }
 
     // 残りの3要素をソート
     sort_three(stack_a);
 
-    // スタックBの要素を最適な順序で戻す
-    if (stack_b->size == 2 && stack_b->head->value < stack_b->head->next->value)
-        sb(stack_b, 1);
+    // スタックBの要素を戻す
     while (stack_b->size > 0)
         pa(stack_a, stack_b, 1);
 }
@@ -396,106 +315,6 @@ void merge_stacks(t_stack *stack_a, t_stack *stack_b, int len_b)
         while (len_b--)
             pa(stack_a, stack_b, 1);
     }
-}
-
-// 改善されたピボット選択
-int get_better_pivot(t_stack *stack, int len)
-{
-    t_node *current;
-    int *arr;
-    int i;
-    int pivot = 0;
-
-    arr = (int *)malloc(sizeof(int) * len);
-    if (!arr)
-        return (0);
-
-    current = stack->head;
-    i = 0;
-    while (i < len && current)
-    {
-        arr[i] = current->value;
-        current = current->next;
-        i++;
-    }
-
-    // クイックセレクトで中央値を選択
-    int left = 0;
-    int right = len - 1;
-    int k = len / 2;
-    
-    while (left < right)
-    {
-        int store_idx = left;
-        
-        for (i = left; i < right; i++)
-        {
-            if (arr[i] < arr[right])
-            {
-                int temp = arr[store_idx];
-                arr[store_idx] = arr[i];
-                arr[i] = temp;
-                store_idx++;
-            }
-        }
-        
-        int temp = arr[store_idx];
-        arr[store_idx] = arr[right];
-        arr[right] = temp;
-        
-        if (store_idx == k)
-        {
-            pivot = arr[store_idx];
-            break;
-        }
-        else if (store_idx < k)
-            left = store_idx + 1;
-        else
-            right = store_idx - 1;
-    }
-
-    if (left == right)
-        pivot = arr[left];
-
-    free(arr);
-    return (pivot);
-}
-
-void improved_quick_sort(t_stack *stack_a, t_stack *stack_b, int len)
-{
-    if (len <= 5)
-    {
-        sort_five_or_less(stack_a, stack_b);
-        return;
-    }
-
-    if (is_sorted_range(stack_a, len))
-        return;
-
-    int pivot = get_better_pivot(stack_a, len);
-    int pushed = 0;
-
-    // ピボットより小さい要素をスタックBに移動
-    for (int i = 0; i < len; i++)
-    {
-        if (stack_a->head->value < pivot)
-        {
-            pb(stack_a, stack_b, 1);
-            pushed++;
-        }
-        else
-            ra(stack_a, 1);
-    }
-
-    // スタックAの要素を元の位置に戻す
-    for (int i = 0; i < (len - pushed); i++)
-        rra(stack_a, 1);
-
-    // スタックAの残りの要素をソート
-    improved_quick_sort(stack_a, stack_b, len - pushed);
-
-    // スタックBの要素をソートしながらマージ
-    merge_stacks(stack_a, stack_b, pushed);
 }
 
 void sort_stack(t_stack *stack_a, t_stack *stack_b)
