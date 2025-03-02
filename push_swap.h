@@ -54,14 +54,15 @@ int     *get_sorted_array(t_stack *stack);
 
 // 改善されたソート関数
 void    chunk_sort(t_stack *stack_a, t_stack *stack_b);
-void    sort_large(t_stack *stack_a, t_stack *stack_b);
 void    sort_medium(t_stack *stack_a, t_stack *stack_b);
-
-// 操作最適化
+void    sort_large(t_stack *stack_a, t_stack *stack_b);
 void    smart_rotate_a(t_stack *stack_a, t_stack *stack_b, int target_pos);
 void    smart_rotate_b(t_stack *stack_a, t_stack *stack_b, int target_pos);
 int     get_target_position(t_stack *stack, int value);
 int     get_cost(int pos, int size);
+void    optimize_merge(t_stack *stack_a, t_stack *stack_b);
+int     get_stack_min(t_stack *stack);
+int     get_stack_max(t_stack *stack);
 
 // エラーハンドリング
 void    error_exit(void);
