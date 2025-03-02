@@ -240,48 +240,73 @@ static void rotate_optimal(t_stack *stack, int pos1, int pos2)
     size = stack->size;
     mid = size / 2;
 
-    // 両方の位置が中央より上にある場合
+    // 両方の位置が中央より上にある場合は上から回転
     if (pos1 <= mid && pos2 <= mid)
     {
-        while (pos1 > 0 || pos2 > 0)
+        while (pos1 > 0)
         {
             ra(stack, 1);
-            if (pos1 > 0)
-                pos1--;
+            pos1--;
             if (pos2 > 0)
                 pos2--;
         }
+        while (pos2 > 0)
+        {
+            ra(stack, 1);
+            pos2--;
+        }
     }
-    // 両方の位置が中央より下にある場合
+    // 両方の位置が中央より下にある場合は下から回転
     else if (pos1 > mid && pos2 > mid)
     {
-        while (pos1 < size || pos2 < size)
+        while (pos1 < size)
         {
             rra(stack, 1);
-            if (pos1 < size)
-                pos1++;
+            pos1++;
             if (pos2 < size)
                 pos2++;
         }
+        while (pos2 < size)
+        {
+            rra(stack, 1);
+            pos2++;
+        }
     }
-    // それ以外の場合は個別に移動
+    // それ以外の場合は近い方を先に移動
     else
     {
-        if (pos1 <= mid)
+        int cost1 = pos1 <= mid ? pos1 : size - pos1;
+        int cost2 = pos2 <= mid ? pos2 : size - pos2;
+
+        if (cost1 <= cost2)
         {
-            while (pos1 > 0)
-            {
-                ra(stack, 1);
-                pos1--;
-            }
+            if (pos1 <= mid)
+                while (pos1-- > 0)
+                    ra(stack, 1);
+            else
+                while (pos1++ < size)
+                    rra(stack, 1);
+            if (pos2 <= mid)
+                while (pos2-- > 0)
+                    ra(stack, 1);
+            else
+                while (pos2++ < size)
+                    rra(stack, 1);
         }
         else
         {
-            while (pos1 < size)
-            {
-                rra(stack, 1);
-                pos1++;
-            }
+            if (pos2 <= mid)
+                while (pos2-- > 0)
+                    ra(stack, 1);
+            else
+                while (pos2++ < size)
+                    rra(stack, 1);
+            if (pos1 <= mid)
+                while (pos1-- > 0)
+                    ra(stack, 1);
+            else
+                while (pos1++ < size)
+                    rra(stack, 1);
         }
     }
 }
@@ -311,12 +336,12 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
     while (stack_a->size > 3)
     {
         find_min_max_pos(stack_a, &min_pos, &max_pos);
+        // 最小値と最大値の位置に基づいて最適な回転を実行
         rotate_optimal(stack_a, min_pos, max_pos);
         
-        // 最小値と最大値が先頭に来るまで回転
-        if (stack_a->head->value == get_stack_min(stack_a))
-            pb(stack_a, stack_b, 1);
-        else
+        // スタックBに最小値と最大値を移動
+        pb(stack_a, stack_b, 1);
+        if (stack_a->size > 3)
             pb(stack_a, stack_b, 1);
     }
 
@@ -324,7 +349,7 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
     sort_three(stack_a);
 
     // スタックBの要素を最適な順序で戻す
-    if (stack_b->size == 2 && stack_b->head->value > stack_b->head->next->value)
+    if (stack_b->size == 2 && stack_b->head->value < stack_b->head->next->value)
         sb(stack_b, 1);
     while (stack_b->size > 0)
         pa(stack_a, stack_b, 1);
