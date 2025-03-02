@@ -179,8 +179,10 @@ void sort_large(t_stack *stack_a, t_stack *stack_b)
     // チャンク数を調整（最適な値を設定）
     if (size <= 100)
         chunk_count = 5;
+    else if (size <= 300)
+        chunk_count = 8;
     else
-        chunk_count = 12;
+        chunk_count = 11;
     
     // スタックの最小値と最大値を取得
     min_val = get_stack_min(stack_a);
@@ -191,19 +193,20 @@ void sort_large(t_stack *stack_a, t_stack *stack_b)
     if (chunk_size < 1)
         chunk_size = 1;
     
-    // チャンクごとにスタックBに移動
+    // チャンクごとにスタックBに移動（最適化）
     for (i = 0; i < chunk_count; i++)
     {
         pushed = 0;
         j = 0;
-        while (j < size * 2 && pushed < size / chunk_count + 1)
+        // 各チャンクで効率的に要素を探す
+        while (j < size * 3 && pushed < (size / chunk_count) + 2)
         {
             if (stack_a->head->value >= min_val + i * chunk_size && 
                 stack_a->head->value < min_val + (i + 1) * chunk_size)
             {
                 pb(stack_a, stack_b, 1);
                 
-                // 小さい値は下に、大きい値は上に配置
+                // スタックBでの位置を最適化
                 if (stack_b->head->value < min_val + i * chunk_size + chunk_size / 2)
                     rb(stack_b, 1);
                 
@@ -211,12 +214,54 @@ void sort_large(t_stack *stack_a, t_stack *stack_b)
             }
             else
             {
-                ra(stack_a, 1);
+                // 効率的な回転方向を選択
+                int target_pos = -1;
+                t_node *current = stack_a->head;
+                int pos = 0;
+                
+                // 現在のチャンク内の要素を探す
+                while (current && pos < size / 2)
+                {
+                    if (current->value >= min_val + i * chunk_size && 
+                        current->value < min_val + (i + 1) * chunk_size)
+                    {
+                        target_pos = pos;
+                        break;
+                    }
+                    current = current->next;
+                    pos++;
+                }
+                
+                // 下半分も探す
+                if (target_pos == -1)
+                {
+                    current = stack_a->head;
+                    pos = 0;
+                    while (current)
+                    {
+                        if (current->value >= min_val + i * chunk_size && 
+                            current->value < min_val + (i + 1) * chunk_size)
+                        {
+                            target_pos = pos;
+                            break;
+                        }
+                        current = current->next;
+                        pos++;
+                    }
+                }
+                
+                // 最適な回転方向を選択
+                if (target_pos != -1 && target_pos <= size / 2)
+                    ra(stack_a, 1);
+                else if (target_pos != -1)
+                    rra(stack_a, 1);
+                else
+                    ra(stack_a, 1);
             }
             j++;
             
             // 十分な数の要素が移動されたら次のチャンクへ
-            if (pushed >= size / chunk_count + 1)
+            if (pushed >= (size / chunk_count) + 2)
                 break;
         }
     }
@@ -225,19 +270,8 @@ void sort_large(t_stack *stack_a, t_stack *stack_b)
     while (stack_a->size > 0)
         pb(stack_a, stack_b, 1);
     
-    // スタックBから最大値順にスタックAに戻す
-    while (stack_b->size > 0)
-    {
-        // スタックBの最大値を見つける
-        int max = get_stack_max(stack_b);
-        int max_pos = get_target_position(stack_b, max);
-        
-        // 最適な回転方向を選択
-        smart_rotate_b(stack_a, stack_b, max_pos);
-        
-        // スタックAに移動
-        pa(stack_a, stack_b, 1);
-    }
+    // 最適化されたマージ戦略を使用
+    optimize_merge(stack_a, stack_b);
 }
 
 // スタックBからスタックAに要素を最適に戻す
@@ -248,6 +282,7 @@ void optimize_merge(t_stack *stack_a, t_stack *stack_b)
     int size_b;
     int next_max;
     int next_max_pos;
+    int cost1, cost2, combined_cost;
     
     while (stack_b->size > 0)
     {
@@ -279,56 +314,77 @@ void optimize_merge(t_stack *stack_a, t_stack *stack_b)
             current = current->next;
         }
         
-        // 最大値と次の最大値の位置に基づいて最適な戦略を選択
-        if (max_pos <= size_b / 2 && next_max_pos <= size_b / 2 && 
-            abs(max_pos - next_max_pos) <= 3)
+        // 各操作のコストを計算
+        cost1 = get_cost(max_pos, size_b);
+        cost2 = get_cost(next_max_pos, size_b);
+        
+        // 最大値と次の最大値を連続して処理するコスト
+        if (max_pos <= size_b / 2 && next_max_pos <= size_b / 2)
+            combined_cost = (max_pos > next_max_pos) ? max_pos : next_max_pos;
+        else if (max_pos > size_b / 2 && next_max_pos > size_b / 2)
+            combined_cost = (size_b - max_pos < size_b - next_max_pos) ? 
+                            (size_b - max_pos) : (size_b - next_max_pos);
+        else
+            combined_cost = cost1 + cost2;
+        
+        // 最適な戦略を選択
+        if (combined_cost < cost1 + cost2 - 1 && abs(max_pos - next_max_pos) <= 5)
         {
-            // 両方が上半分にあり、近い場合
-            if (max_pos < next_max_pos)
+            // 両方を一緒に処理する方が効率的な場合
+            if (max_pos <= size_b / 2 && next_max_pos <= size_b / 2)
             {
-                // 最大値が先に来る場合
-                smart_rotate_b(stack_a, stack_b, max_pos);
-                pa(stack_a, stack_b, 1);
-                smart_rotate_b(stack_a, stack_b, get_target_position(stack_b, next_max));
-                pa(stack_a, stack_b, 1);
+                // 両方が上半分にある場合
+                if (max_pos < next_max_pos)
+                {
+                    // 最大値が先に来る場合
+                    smart_rotate_b(stack_a, stack_b, max_pos);
+                    pa(stack_a, stack_b, 1);
+                    smart_rotate_b(stack_a, stack_b, get_target_position(stack_b, next_max));
+                    pa(stack_a, stack_b, 1);
+                }
+                else
+                {
+                    // 次の最大値が先に来る場合
+                    smart_rotate_b(stack_a, stack_b, next_max_pos);
+                    pa(stack_a, stack_b, 1);
+                    ra(stack_a, 1);
+                    smart_rotate_b(stack_a, stack_b, get_target_position(stack_b, max));
+                    pa(stack_a, stack_b, 1);
+                    rra(stack_a, 1);
+                }
+            }
+            else if (max_pos > size_b / 2 && next_max_pos > size_b / 2)
+            {
+                // 両方が下半分にある場合
+                if (max_pos > next_max_pos)
+                {
+                    // 最大値が後に来る場合
+                    smart_rotate_b(stack_a, stack_b, next_max_pos);
+                    pa(stack_a, stack_b, 1);
+                    ra(stack_a, 1);
+                    smart_rotate_b(stack_a, stack_b, get_target_position(stack_b, max));
+                    pa(stack_a, stack_b, 1);
+                    rra(stack_a, 1);
+                }
+                else
+                {
+                    // 次の最大値が後に来る場合
+                    smart_rotate_b(stack_a, stack_b, max_pos);
+                    pa(stack_a, stack_b, 1);
+                    smart_rotate_b(stack_a, stack_b, get_target_position(stack_b, next_max));
+                    pa(stack_a, stack_b, 1);
+                }
             }
             else
             {
-                // 次の最大値が先に来る場合
-                smart_rotate_b(stack_a, stack_b, next_max_pos);
-                pa(stack_a, stack_b, 1);
-                ra(stack_a, 1);
-                smart_rotate_b(stack_a, stack_b, get_target_position(stack_b, max));
-                pa(stack_a, stack_b, 1);
-                rra(stack_a, 1);
-            }
-        }
-        else if (max_pos > size_b / 2 && next_max_pos > size_b / 2 && 
-                 abs(max_pos - next_max_pos) <= 3)
-        {
-            // 両方が下半分にあり、近い場合
-            if (max_pos > next_max_pos)
-            {
-                // 最大値が後に来る場合
-                smart_rotate_b(stack_a, stack_b, next_max_pos);
-                pa(stack_a, stack_b, 1);
-                ra(stack_a, 1);
-                smart_rotate_b(stack_a, stack_b, get_target_position(stack_b, max));
-                pa(stack_a, stack_b, 1);
-                rra(stack_a, 1);
-            }
-            else
-            {
-                // 次の最大値が後に来る場合
+                // 通常の処理
                 smart_rotate_b(stack_a, stack_b, max_pos);
-                pa(stack_a, stack_b, 1);
-                smart_rotate_b(stack_a, stack_b, get_target_position(stack_b, next_max));
                 pa(stack_a, stack_b, 1);
             }
         }
         else
         {
-            // 通常の処理
+            // 通常の処理（最大値のみ処理）
             smart_rotate_b(stack_a, stack_b, max_pos);
             pa(stack_a, stack_b, 1);
         }
