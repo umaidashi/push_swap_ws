@@ -169,20 +169,21 @@ void sort_large(t_stack *stack_a, t_stack *stack_b)
 {
     int chunk_size;
     int chunk_count;
-    int i, j;
+    int i;
     int size;
-    int pushed;
     int min_val, max_val, range;
+    int target_pos, current_pos;
+    t_node *current;
     
     size = stack_a->size;
     
     // チャンク数を調整（最適な値を設定）
     if (size <= 100)
-        chunk_count = 5;
+        chunk_count = 4;
     else if (size <= 300)
         chunk_count = 8;
     else
-        chunk_count = 11;
+        chunk_count = 9;
     
     // スタックの最小値と最大値を取得
     min_val = get_stack_min(stack_a);
@@ -193,85 +194,114 @@ void sort_large(t_stack *stack_a, t_stack *stack_b)
     if (chunk_size < 1)
         chunk_size = 1;
     
-    // チャンクごとにスタックBに移動（最適化）
+    // 最小値から最大値まで順にスタックBに移動
     for (i = 0; i < chunk_count; i++)
     {
-        pushed = 0;
-        j = 0;
-        // 各チャンクで効率的に要素を探す
-        while (j < size * 3 && pushed < (size / chunk_count) + 2)
+        // 現在のチャンクの範囲
+        int chunk_min = min_val + i * chunk_size;
+        int chunk_max = (i == chunk_count - 1) ? max_val : min_val + (i + 1) * chunk_size - 1;
+        
+        // チャンク内のすべての要素を処理するまで繰り返す
+        while (1)
         {
-            if (stack_a->head->value >= min_val + i * chunk_size && 
-                stack_a->head->value < min_val + (i + 1) * chunk_size)
+            // チャンク内の要素を探す
+            target_pos = -1;
+            current_pos = 0;
+            current = stack_a->head;
+            
+            // スタックAの上半分を探索
+            while (current && current_pos <= size / 2)
             {
-                pb(stack_a, stack_b, 1);
-                
-                // スタックBでの位置を最適化
-                if (stack_b->head->value < min_val + i * chunk_size + chunk_size / 2)
-                    rb(stack_b, 1);
-                
-                pushed++;
-            }
-            else
-            {
-                // 効率的な回転方向を選択
-                int target_pos = -1;
-                t_node *current = stack_a->head;
-                int pos = 0;
-                
-                // 現在のチャンク内の要素を探す
-                while (current && pos < size / 2)
+                if (current->value >= chunk_min && current->value <= chunk_max)
                 {
-                    if (current->value >= min_val + i * chunk_size && 
-                        current->value < min_val + (i + 1) * chunk_size)
+                    target_pos = current_pos;
+                    break;
+                }
+                current = current->next;
+                current_pos++;
+            }
+            
+            // 上半分に見つからなければ下半分を探索
+            if (target_pos == -1)
+            {
+                current = stack_a->head;
+                current_pos = 0;
+                
+                while (current)
+                {
+                    if (current->value >= chunk_min && current->value <= chunk_max)
                     {
-                        target_pos = pos;
+                        target_pos = current_pos;
                         break;
                     }
                     current = current->next;
-                    pos++;
+                    current_pos++;
                 }
-                
-                // 下半分も探す
-                if (target_pos == -1)
-                {
-                    current = stack_a->head;
-                    pos = 0;
-                    while (current)
-                    {
-                        if (current->value >= min_val + i * chunk_size && 
-                            current->value < min_val + (i + 1) * chunk_size)
-                        {
-                            target_pos = pos;
-                            break;
-                        }
-                        current = current->next;
-                        pos++;
-                    }
-                }
-                
-                // 最適な回転方向を選択
-                if (target_pos != -1 && target_pos <= size / 2)
-                    ra(stack_a, 1);
-                else if (target_pos != -1)
-                    rra(stack_a, 1);
-                else
-                    ra(stack_a, 1);
             }
-            j++;
             
-            // 十分な数の要素が移動されたら次のチャンクへ
-            if (pushed >= (size / chunk_count) + 2)
+            // チャンク内の要素がもう見つからなければ次のチャンクへ
+            if (target_pos == -1)
                 break;
+            
+            // 最適な回転方向を選択して要素をスタックAの先頭に持ってくる
+            if (target_pos <= stack_a->size / 2)
+            {
+                while (target_pos > 0)
+                {
+                    ra(stack_a, 1);
+                    target_pos--;
+                }
+            }
+            else
+            {
+                while (target_pos < stack_a->size)
+                {
+                    rra(stack_a, 1);
+                    target_pos++;
+                }
+            }
+            
+            // スタックBに移動
+            pb(stack_a, stack_b, 1);
+            
+            // スタックBでの位置を最適化（大きい値は上に、小さい値は下に）
+            if (stack_b->size > 1)
+            {
+                // 中央値よりも大きい値は上に配置
+                if (stack_b->head->value > chunk_min + (chunk_max - chunk_min) / 2)
+                    rb(stack_b, 1);
+            }
         }
     }
     
-    // 残りの要素をスタックBに移動
-    while (stack_a->size > 0)
-        pb(stack_a, stack_b, 1);
-    
-    // 最適化されたマージ戦略を使用
-    optimize_merge(stack_a, stack_b);
+    // スタックBから最大値順にスタックAに戻す
+    while (stack_b->size > 0)
+    {
+        // スタックBの最大値を見つける
+        int max = get_stack_max(stack_b);
+        int max_pos = get_target_position(stack_b, max);
+        
+        // 最適な回転方向を選択
+        if (max_pos <= stack_b->size / 2)
+        {
+            while (max_pos > 0)
+            {
+                rb(stack_b, 1);
+                max_pos--;
+            }
+        }
+        else
+        {
+            while (max_pos < stack_b->size)
+            {
+                rrb(stack_b, 1);
+                max_pos++;
+            }
+        }
+        
+        // スタックAに移動
+        pa(stack_a, stack_b, 1);
+    }
 }
 
 // スタックBからスタックAに要素を最適に戻す
