@@ -201,8 +201,6 @@ void sort_three(t_stack *stack)
 void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
 {
     int size;
-    int min;
-    int max;
 
     size = stack_a->size;
     if (size <= 1 || is_sorted_range(stack_a, size))
@@ -220,19 +218,32 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
     }
 
     // 4または5要素の場合
-    get_min_max(stack_a, size, &min, &max);
-
-    // 最小値と最大値をスタックBに移動
     while (stack_a->size > 3)
     {
-        if (stack_a->head->value == min || stack_a->head->value == max)
+        // 最小値を見つけてスタックBに移動
+        int min = get_stack_min(stack_a);
+        int rotations = 0;
+        t_node *current = stack_a->head;
+
+        // 最小値までの回転回数を計算
+        while (current && current->value != min)
         {
-            pb(stack_a, stack_b, 1);
+            rotations++;
+            current = current->next;
+        }
+
+        // 最小値を効率的に移動
+        if (rotations <= stack_a->size / 2)
+        {
+            while (stack_a->head->value != min)
+                ra(stack_a, 1);
         }
         else
         {
-            ra(stack_a, 1);
+            while (stack_a->head->value != min)
+                rra(stack_a, 1);
         }
+        pb(stack_a, stack_b, 1);
     }
 
     // 残りの3要素をソート
@@ -240,17 +251,7 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
 
     // スタックBの要素を戻す
     while (stack_b->size > 0)
-    {
-        if (stack_b->head->value == min)
-        {
-            pa(stack_a, stack_b, 1);
-        }
-        else
-        {
-            pa(stack_a, stack_b, 1);
-            ra(stack_a, 1);
-        }
-    }
+        pa(stack_a, stack_b, 1);
 }
 
 // 改善されたピボット選択
