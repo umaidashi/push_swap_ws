@@ -198,12 +198,67 @@ void sort_three(t_stack *stack)
         rra(stack, 1);
 }
 
+// 最小値を先頭に移動する補助関数
+static void move_to_top(t_stack *stack, int pos)
+{
+    if (pos <= stack->size / 2)
+    {
+        while (pos > 0)
+        {
+            ra(stack, 1);
+            pos--;
+        }
+    }
+    else
+    {
+        while (pos < stack->size)
+        {
+            rra(stack, 1);
+            pos++;
+        }
+    }
+}
+
+// 最小値の位置を探す補助関数
+static int find_min_position(t_stack *stack, int min)
+{
+    int pos;
+    t_node *current;
+
+    pos = 0;
+    current = stack->head;
+    while (current && current->value != min)
+    {
+        pos++;
+        current = current->next;
+    }
+    return (pos);
+}
+
+// 2番目に小さい値を探す補助関数
+static int find_second_min(t_stack *stack, int min)
+{
+    int second_min;
+    t_node *current;
+
+    second_min = INT_MAX;
+    current = stack->head;
+    while (current)
+    {
+        if (current->value > min && current->value < second_min)
+            second_min = current->value;
+        current = current->next;
+    }
+    return (second_min);
+}
+
 void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
 {
     int size;
     int min;
-    int dist;
-    t_node *current;
+    int second_min;
+    int min_pos;
+    int second_min_pos;
 
     size = stack_a->size;
     if (size <= 1 || is_sorted_range(stack_a, size))
@@ -223,53 +278,78 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
     // 4または5要素の場合
     while (stack_a->size > 3)
     {
-        // 最小値を見つける
         min = get_stack_min(stack_a);
-        dist = 0;
-        current = stack_a->head;
+        second_min = find_second_min(stack_a, min);
+        min_pos = find_min_position(stack_a, min);
+        second_min_pos = find_min_position(stack_a, second_min);
 
-        // 最小値までの距離を計算
-        while (current && current->value != min)
+        // より効率的な方を先に移動
+        if (min_pos <= second_min_pos && min_pos <= stack_a->size - second_min_pos)
         {
-            dist++;
-            current = current->next;
-        }
-
-        // 最小値が先頭にある場合はpush
-        if (dist == 0)
-            pb(stack_a, stack_b, 1);
-        // 最小値が2番目にある場合はswap
-        else if (dist == 1)
-        {
-            sa(stack_a, 1);
+            move_to_top(stack_a, min_pos);
             pb(stack_a, stack_b, 1);
         }
-        // 最小値が最後にある場合は逆回転
-        else if (dist == stack_a->size - 1)
+        else if (second_min_pos <= min_pos && second_min_pos <= stack_a->size - min_pos)
         {
-            rra(stack_a, 1);
+            move_to_top(stack_a, second_min_pos);
             pb(stack_a, stack_b, 1);
         }
-        // 最小値が後ろから2番目にある場合は逆回転2回
-        else if (dist == stack_a->size - 2)
-        {
-            rra(stack_a, 1);
-            rra(stack_a, 1);
-            pb(stack_a, stack_b, 1);
-        }
-        // それ以外は最短経路で回転
-        else if (dist <= stack_a->size / 2)
-            ra(stack_a, 1);
         else
-            rra(stack_a, 1);
+        {
+            move_to_top(stack_a, min_pos);
+            pb(stack_a, stack_b, 1);
+        }
     }
 
     // 残りの3要素をソート
     sort_three(stack_a);
 
-    // スタックBの要素を戻す
+    // スタックBの要素を戻す（最大2要素）
     while (stack_b->size > 0)
         pa(stack_a, stack_b, 1);
+}
+
+// スタックBをソートしながらスタックAに戻す
+void merge_stacks(t_stack *stack_a, t_stack *stack_b, int len_b)
+{
+    if (len_b <= 0)
+        return;
+
+    // スタックBが降順にソートされているか確認
+    if (!is_reverse_sorted_range(stack_b, len_b))
+    {
+        // スタックBをソート
+        int min;
+        get_min_max(stack_b, len_b, &min, NULL);
+        int mid = (min + get_stack_max(stack_b)) / 2;
+        int pushed = 0;
+
+        // 大きい要素をスタックAに移動
+        for (int i = 0; i < len_b; i++)
+        {
+            if (stack_b->head->value > mid)
+            {
+                pa(stack_a, stack_b, 1);
+                ra(stack_a, 1);
+                pushed++;
+            }
+            else
+                rb(stack_b, 1);
+        }
+
+        // 残りの要素を処理
+        merge_stacks(stack_a, stack_b, len_b - pushed);
+
+        // 移動した要素を元に戻す
+        while (pushed--)
+            rra(stack_a, 1);
+    }
+    else
+    {
+        // すでにソートされている場合は直接移動
+        while (len_b--)
+            pa(stack_a, stack_b, 1);
+    }
 }
 
 // 改善されたピボット選択
@@ -278,7 +358,7 @@ int get_better_pivot(t_stack *stack, int len)
     t_node *current;
     int *arr;
     int i;
-    int pivot = 0;  // 初期化を追加
+    int pivot = 0;
 
     arr = (int *)malloc(sizeof(int) * len);
     if (!arr)
@@ -329,53 +409,10 @@ int get_better_pivot(t_stack *stack, int len)
     }
 
     if (left == right)
-        pivot = arr[left];  // エッジケースの処理を追加
+        pivot = arr[left];
 
     free(arr);
     return (pivot);
-}
-
-// スタックBをソートしながらスタックAに戻す
-void merge_stacks(t_stack *stack_a, t_stack *stack_b, int len_b)
-{
-    if (len_b <= 0)
-        return;
-
-    // スタックBが降順にソートされているか確認
-    if (!is_reverse_sorted_range(stack_b, len_b))
-    {
-        // スタックBをソート
-        int min;
-        get_min_max(stack_b, len_b, &min, NULL);
-        int mid = (min + get_stack_max(stack_b)) / 2;
-        int pushed = 0;
-
-        // 大きい要素をスタックAに移動
-        for (int i = 0; i < len_b; i++)
-        {
-            if (stack_b->head->value > mid)
-            {
-                pa(stack_a, stack_b, 1);
-                ra(stack_a, 1);
-                pushed++;
-            }
-            else
-                rb(stack_b, 1);
-        }
-
-        // 残りの要素を処理
-        merge_stacks(stack_a, stack_b, len_b - pushed);
-
-        // 移動した要素を元に戻す
-        while (pushed--)
-            rra(stack_a, 1);
-    }
-    else
-    {
-        // すでにソートされている場合は直接移動
-        while (len_b--)
-            pa(stack_a, stack_b, 1);
-    }
 }
 
 void improved_quick_sort(t_stack *stack_a, t_stack *stack_b, int len)
