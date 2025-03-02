@@ -198,6 +198,138 @@ void sort_three(t_stack *stack)
         rra(stack, 1);
 }
 
+// 最小値と最大値の位置を同時に探す補助関数
+static void find_min_max_pos(t_stack *stack, int *min_pos, int *max_pos)
+{
+    t_node *current;
+    int min;
+    int max;
+    int pos;
+
+    if (!stack || !stack->head)
+        return;
+    current = stack->head;
+    min = current->value;
+    max = current->value;
+    *min_pos = 0;
+    *max_pos = 0;
+    pos = 0;
+    while (current)
+    {
+        if (current->value < min)
+        {
+            min = current->value;
+            *min_pos = pos;
+        }
+        if (current->value > max)
+        {
+            max = current->value;
+            *max_pos = pos;
+        }
+        pos++;
+        current = current->next;
+    }
+}
+
+// スタックの最適な回転方向を決定する補助関数
+static void rotate_optimal(t_stack *stack, int pos1, int pos2)
+{
+    int size;
+    int mid;
+
+    size = stack->size;
+    mid = size / 2;
+
+    // 両方の位置が中央より上にある場合
+    if (pos1 <= mid && pos2 <= mid)
+    {
+        while (pos1 > 0 || pos2 > 0)
+        {
+            ra(stack, 1);
+            if (pos1 > 0)
+                pos1--;
+            if (pos2 > 0)
+                pos2--;
+        }
+    }
+    // 両方の位置が中央より下にある場合
+    else if (pos1 > mid && pos2 > mid)
+    {
+        while (pos1 < size || pos2 < size)
+        {
+            rra(stack, 1);
+            if (pos1 < size)
+                pos1++;
+            if (pos2 < size)
+                pos2++;
+        }
+    }
+    // それ以外の場合は個別に移動
+    else
+    {
+        if (pos1 <= mid)
+        {
+            while (pos1 > 0)
+            {
+                ra(stack, 1);
+                pos1--;
+            }
+        }
+        else
+        {
+            while (pos1 < size)
+            {
+                rra(stack, 1);
+                pos1++;
+            }
+        }
+    }
+}
+
+void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
+{
+    int size;
+    int min_pos;
+    int max_pos;
+
+    size = stack_a->size;
+    if (size <= 1 || is_sorted_range(stack_a, size))
+        return;
+    if (size == 2)
+    {
+        if (stack_a->head->value > stack_a->head->next->value)
+            sa(stack_a, 1);
+        return;
+    }
+    if (size == 3)
+    {
+        sort_three(stack_a);
+        return;
+    }
+
+    // 4または5要素の場合
+    while (stack_a->size > 3)
+    {
+        find_min_max_pos(stack_a, &min_pos, &max_pos);
+        rotate_optimal(stack_a, min_pos, max_pos);
+        
+        // 最小値と最大値が先頭に来るまで回転
+        if (stack_a->head->value == get_stack_min(stack_a))
+            pb(stack_a, stack_b, 1);
+        else
+            pb(stack_a, stack_b, 1);
+    }
+
+    // 残りの3要素をソート
+    sort_three(stack_a);
+
+    // スタックBの要素を最適な順序で戻す
+    if (stack_b->size == 2 && stack_b->head->value > stack_b->head->next->value)
+        sb(stack_b, 1);
+    while (stack_b->size > 0)
+        pa(stack_a, stack_b, 1);
+}
+
 // 最小値を先頭に移動する補助関数
 static void move_to_top(t_stack *stack, int pos)
 {
@@ -244,44 +376,6 @@ static int find_min_pos(t_stack *stack)
         current = current->next;
     }
     return (min_pos);
-}
-
-void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
-{
-    int size;
-    int min_pos;
-
-    size = stack_a->size;
-    if (size <= 1 || is_sorted_range(stack_a, size))
-        return;
-    if (size == 2)
-    {
-        if (stack_a->head->value > stack_a->head->next->value)
-            sa(stack_a, 1);
-        return;
-    }
-    if (size == 3)
-    {
-        sort_three(stack_a);
-        return;
-    }
-
-    // 4または5要素の場合
-    while (stack_a->size > 3)
-    {
-        min_pos = find_min_pos(stack_a);
-        move_to_top(stack_a, min_pos);
-        pb(stack_a, stack_b, 1);
-    }
-
-    // 残りの3要素をソート
-    sort_three(stack_a);
-
-    // スタックBの要素を戻す
-    if (stack_b->size == 2 && stack_b->head->value > stack_b->head->next->value)
-        sb(stack_b, 1);
-    while (stack_b->size > 0)
-        pa(stack_a, stack_b, 1);
 }
 
 // スタックBをソートしながらスタックAに戻す
