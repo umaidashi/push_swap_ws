@@ -330,54 +330,6 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
         pa(stack_a, stack_b, 1);
 }
 
-// 最小値を先頭に移動する補助関数
-static void move_to_top(t_stack *stack, int pos)
-{
-    if (pos <= stack->size / 2)
-    {
-        while (pos > 0)
-        {
-            ra(stack, 1);
-            pos--;
-        }
-    }
-    else
-    {
-        while (pos < stack->size)
-        {
-            rra(stack, 1);
-            pos++;
-        }
-    }
-}
-
-// 最小値の位置を探す補助関数
-static int find_min_pos(t_stack *stack)
-{
-    t_node *current;
-    int min;
-    int min_pos;
-    int pos;
-
-    if (!stack || !stack->head)
-        return (0);
-    current = stack->head;
-    min = current->value;
-    min_pos = 0;
-    pos = 0;
-    while (current)
-    {
-        if (current->value < min)
-        {
-            min = current->value;
-            min_pos = pos;
-        }
-        pos++;
-        current = current->next;
-    }
-    return (min_pos);
-}
-
 // スタックBをソートしながらスタックAに戻す
 void merge_stacks(t_stack *stack_a, t_stack *stack_b, int len_b)
 {
