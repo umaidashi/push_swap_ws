@@ -161,12 +161,76 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
         pa(stack_a, stack_b, 1);
 }
 
+// スタックの最小値と最大値を取得
+void get_min_max(t_stack *stack, int len, int *min, int *max)
+{
+    t_node *current;
+    int i;
+
+    *min = INT_MAX;
+    *max = INT_MIN;
+    current = stack->head;
+    i = 0;
+    while (i < len && current)
+    {
+        if (current->value < *min)
+            *min = current->value;
+        if (current->value > *max)
+            *max = current->value;
+        current = current->next;
+        i++;
+    }
+}
+
+// スタックの要素が昇順にソートされているかチェック
+int is_sorted_range(t_stack *stack, int len)
+{
+    t_node *current;
+    int i;
+
+    if (!stack || !stack->head || len <= 1)
+        return (1);
+    
+    current = stack->head;
+    i = 1;
+    while (i < len && current && current->next)
+    {
+        if (current->value > current->next->value)
+            return (0);
+        current = current->next;
+        i++;
+    }
+    return (1);
+}
+
+// スタックの要素が降順にソートされているかチェック
+int is_reverse_sorted_range(t_stack *stack, int len)
+{
+    t_node *current;
+    int i;
+
+    if (!stack || !stack->head || len <= 1)
+        return (1);
+    
+    current = stack->head;
+    i = 1;
+    while (i < len && current && current->next)
+    {
+        if (current->value < current->next->value)
+            return (0);
+        current = current->next;
+        i++;
+    }
+    return (1);
+}
+
+// 改善されたピボット選択
 int get_better_pivot(t_stack *stack, int len)
 {
     t_node *current;
     int *arr;
     int i;
-    int pivot;
+    int pivot = 0;  // 初期化を追加
 
     arr = (int *)malloc(sizeof(int) * len);
     if (!arr)
@@ -181,22 +245,89 @@ int get_better_pivot(t_stack *stack, int len)
         i++;
     }
 
-    // 3つの要素（先頭、中央、末尾）の中央値を選択
-    int mid = len / 2;
-    int a = arr[0];
-    int b = arr[mid];
-    int c = arr[len - 1];
+    // クイックセレクトで中央値を選択
+    int left = 0;
+    int right = len - 1;
+    int k = len / 2;
     
-    // 中央値を選択
-    if ((a <= b && b <= c) || (c <= b && b <= a))
-        pivot = b;
-    else if ((b <= a && a <= c) || (c <= a && a <= b))
-        pivot = a;
-    else
-        pivot = c;
+    while (left < right)
+    {
+        int store_idx = left;
+        
+        for (i = left; i < right; i++)
+        {
+            if (arr[i] < arr[right])
+            {
+                int temp = arr[store_idx];
+                arr[store_idx] = arr[i];
+                arr[i] = temp;
+                store_idx++;
+            }
+        }
+        
+        int temp = arr[store_idx];
+        arr[store_idx] = arr[right];
+        arr[right] = temp;
+        
+        if (store_idx == k)
+        {
+            pivot = arr[store_idx];
+            break;
+        }
+        else if (store_idx < k)
+            left = store_idx + 1;
+        else
+            right = store_idx - 1;
+    }
+
+    if (left == right)
+        pivot = arr[left];  // エッジケースの処理を追加
 
     free(arr);
     return (pivot);
+}
+
+// スタックBをソートしながらスタックAに戻す
+void merge_stacks(t_stack *stack_a, t_stack *stack_b, int len_b)
+{
+    if (len_b <= 0)
+        return;
+
+    // スタックBが降順にソートされているか確認
+    if (!is_reverse_sorted_range(stack_b, len_b))
+    {
+        // スタックBをソート
+        int min, max;
+        get_min_max(stack_b, len_b, &min, &max);
+        int mid = (min + max) / 2;
+        int pushed = 0;
+
+        // 大きい要素をスタックAに移動
+        for (int i = 0; i < len_b; i++)
+        {
+            if (stack_b->head->value > mid)
+            {
+                pa(stack_a, stack_b, 1);
+                ra(stack_a, 1);
+                pushed++;
+            }
+            else
+                rb(stack_b, 1);
+        }
+
+        // 残りの要素を処理
+        merge_stacks(stack_a, stack_b, len_b - pushed);
+
+        // 移動した要素を元に戻す
+        while (pushed--)
+            rra(stack_a, 1);
+    }
+    else
+    {
+        // すでにソートされている場合は直接移動
+        while (len_b--)
+            pa(stack_a, stack_b, 1);
+    }
 }
 
 void improved_quick_sort(t_stack *stack_a, t_stack *stack_b, int len)
@@ -207,9 +338,11 @@ void improved_quick_sort(t_stack *stack_a, t_stack *stack_b, int len)
         return;
     }
 
+    if (is_sorted_range(stack_a, len))
+        return;
+
     int pivot = get_better_pivot(stack_a, len);
     int pushed = 0;
-    int rotated = 0;
 
     // ピボットより小さい要素をスタックBに移動
     for (int i = 0; i < len; i++)
@@ -218,11 +351,6 @@ void improved_quick_sort(t_stack *stack_a, t_stack *stack_b, int len)
         {
             pb(stack_a, stack_b, 1);
             pushed++;
-            if (stack_b->size > 1 && stack_b->head->value < pivot / 2)
-            {
-                rb(stack_b, 1);
-                rotated++;
-            }
         }
         else
             ra(stack_a, 1);
@@ -235,20 +363,15 @@ void improved_quick_sort(t_stack *stack_a, t_stack *stack_b, int len)
     // スタックAの残りの要素をソート
     improved_quick_sort(stack_a, stack_b, len - pushed);
 
-    // 回転させた要素を元に戻す
-    while (rotated--)
-        rrb(stack_b, 1);
-
-    // スタックBの要素を順番にスタックAに戻す
-    while (pushed--)
-        pa(stack_a, stack_b, 1);
+    // スタックBの要素をソートしながらマージ
+    merge_stacks(stack_a, stack_b, pushed);
 }
 
 void sort_stack(t_stack *stack_a, t_stack *stack_b)
 {
     if (!stack_a || !stack_a->head)
         return;
-    if (is_sorted(stack_a))
+    if (is_sorted_range(stack_a, stack_a->size))
         return;
     improved_quick_sort(stack_a, stack_b, stack_a->size);
 }
