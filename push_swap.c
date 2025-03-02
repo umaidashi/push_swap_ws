@@ -219,42 +219,37 @@ static void move_to_top(t_stack *stack, int pos)
     }
 }
 
-// 最小値と2番目の最小値を同時に見つける補助関数
-static void find_two_mins(t_stack *stack, int *min, int *second_min, int *min_pos, int *second_min_pos)
+// 最小値の位置を探す補助関数
+static int find_min_pos(t_stack *stack)
 {
     t_node *current;
+    int min;
+    int min_pos;
     int pos;
 
-    *min = INT_MAX;
-    *second_min = INT_MAX;
-    pos = 0;
+    if (!stack || !stack->head)
+        return (0);
     current = stack->head;
+    min = current->value;
+    min_pos = 0;
+    pos = 0;
     while (current)
     {
-        if (current->value < *min)
+        if (current->value < min)
         {
-            *second_min = *min;
-            *second_min_pos = *min_pos;
-            *min = current->value;
-            *min_pos = pos;
-        }
-        else if (current->value < *second_min)
-        {
-            *second_min = current->value;
-            *second_min_pos = pos;
+            min = current->value;
+            min_pos = pos;
         }
         pos++;
         current = current->next;
     }
+    return (min_pos);
 }
 
 void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
 {
     int size;
-    int min;
-    int second_min;
     int min_pos;
-    int second_min_pos;
 
     size = stack_a->size;
     if (size <= 1 || is_sorted_range(stack_a, size))
@@ -274,52 +269,15 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
     // 4または5要素の場合
     while (stack_a->size > 3)
     {
-        find_two_mins(stack_a, &min, &second_min, &min_pos, &second_min_pos);
-
-        // 最小値と2番目の最小値の位置関係に基づいて最適な移動を選択
-        if (abs(min_pos - second_min_pos) == 1)
-        {
-            // 隣接している場合、より効率的な方を先に移動
-            if (min_pos < second_min_pos)
-            {
-                move_to_top(stack_a, min_pos);
-                pb(stack_a, stack_b, 1);
-                move_to_top(stack_a, second_min_pos - 1);
-                pb(stack_a, stack_b, 1);
-            }
-            else
-            {
-                move_to_top(stack_a, second_min_pos);
-                pb(stack_a, stack_b, 1);
-                move_to_top(stack_a, min_pos - 1);
-                pb(stack_a, stack_b, 1);
-            }
-        }
-        else
-        {
-            // 離れている場合、より近い方を先に移動
-            if (min_pos <= stack_a->size / 2 && min_pos <= second_min_pos)
-            {
-                move_to_top(stack_a, min_pos);
-                pb(stack_a, stack_b, 1);
-            }
-            else if (second_min_pos <= stack_a->size / 2)
-            {
-                move_to_top(stack_a, second_min_pos);
-                pb(stack_a, stack_b, 1);
-            }
-            else
-            {
-                move_to_top(stack_a, min_pos);
-                pb(stack_a, stack_b, 1);
-            }
-        }
+        min_pos = find_min_pos(stack_a);
+        move_to_top(stack_a, min_pos);
+        pb(stack_a, stack_b, 1);
     }
 
     // 残りの3要素をソート
     sort_three(stack_a);
 
-    // スタックBの要素を最適な順序で戻す
+    // スタックBの要素を戻す
     if (stack_b->size == 2 && stack_b->head->value > stack_b->head->next->value)
         sb(stack_b, 1);
     while (stack_b->size > 0)
