@@ -94,23 +94,43 @@ void sort_medium(t_stack *stack_a, t_stack *stack_b)
     int i, j;
     int size;
     int pushed;
+    int min_val, max_val, range;
     
     size = stack_a->size;
-    // 適切なチャンク数を決定（サイズに応じて調整）
-    chunk_count = 5;
-    chunk_size = size / chunk_count;
     
-    // チャンクごとにスタックBに移動
+    // 適切なチャンク数を決定（サイズに応じて調整）
+    if (size <= 20)
+        chunk_count = 2;
+    else if (size <= 50)
+        chunk_count = 3;
+    else
+        chunk_count = 4;
+    
+    // スタックの最小値と最大値を取得
+    min_val = get_stack_min(stack_a);
+    max_val = get_stack_max(stack_a);
+    range = max_val - min_val + 1;
+    
+    chunk_size = range / chunk_count;
+    if (chunk_size < 1)
+        chunk_size = 1;
+    
+    // チャンクごとにスタックBに移動（最小値から順に処理）
     for (i = 0; i < chunk_count; i++)
     {
         pushed = 0;
         j = 0;
-        while (j < size && pushed < chunk_size)
+        while (j < size * 2 && pushed < size / chunk_count + 1)
         {
-            if (stack_a->head->value < (i + 1) * chunk_size && 
-                stack_a->head->value >= i * chunk_size)
+            if (stack_a->head->value >= min_val + i * chunk_size && 
+                stack_a->head->value < min_val + (i + 1) * chunk_size)
             {
                 pb(stack_a, stack_b, 1);
+                
+                // 小さい値は下に、大きい値は上に配置
+                if (stack_b->head->value < min_val + i * chunk_size + chunk_size / 2)
+                    rb(stack_b, 1);
+                
                 pushed++;
             }
             else
@@ -118,6 +138,10 @@ void sort_medium(t_stack *stack_a, t_stack *stack_b)
                 ra(stack_a, 1);
             }
             j++;
+            
+            // 十分な数の要素が移動されたら次のチャンクへ
+            if (pushed >= size / chunk_count + 1)
+                break;
         }
     }
     
