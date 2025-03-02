@@ -138,27 +138,57 @@ void sort_three(t_stack *stack)
 
 void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
 {
-    if (stack_a->size <= 3)
+    int size;
+    int min;
+    int max;
+
+    size = stack_a->size;
+    if (size <= 1 || is_sorted_range(stack_a, size))
+        return;
+    if (size == 2)
+    {
+        if (stack_a->head->value > stack_a->head->next->value)
+            sa(stack_a, 1);
+        return;
+    }
+    if (size == 3)
     {
         sort_three(stack_a);
         return;
     }
-    
-    // 最小値を見つけてスタックBに移動
+
+    // 4または5要素の場合
+    get_min_max(stack_a, size, &min, &max);
+
+    // 最小値と最大値をスタックBに移動
     while (stack_a->size > 3)
     {
-        int min = get_stack_min(stack_a);
-        while (stack_a->head->value != min)
+        if (stack_a->head->value == min || stack_a->head->value == max)
+        {
+            pb(stack_a, stack_b, 1);
+        }
+        else
+        {
             ra(stack_a, 1);
-        pb(stack_a, stack_b, 1);
+        }
     }
-    
+
     // 残りの3要素をソート
     sort_three(stack_a);
-    
+
     // スタックBの要素を戻す
     while (stack_b->size > 0)
-        pa(stack_a, stack_b, 1);
+    {
+        if (stack_b->head->value == min)
+        {
+            pa(stack_a, stack_b, 1);
+        }
+        else
+        {
+            pa(stack_a, stack_b, 1);
+            ra(stack_a, 1);
+        }
+    }
 }
 
 // スタックの最小値と最大値を取得
