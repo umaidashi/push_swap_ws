@@ -219,39 +219,6 @@ static void move_to_top(t_stack *stack, int pos)
     }
 }
 
-// 最小値の位置を探す補助関数
-static int find_min_position(t_stack *stack, int min)
-{
-    int pos;
-    t_node *current;
-
-    pos = 0;
-    current = stack->head;
-    while (current && current->value != min)
-    {
-        pos++;
-        current = current->next;
-    }
-    return (pos);
-}
-
-// 2番目に小さい値を探す補助関数
-static int find_second_min(t_stack *stack, int min)
-{
-    int second_min;
-    t_node *current;
-
-    second_min = INT_MAX;
-    current = stack->head;
-    while (current)
-    {
-        if (current->value > min && current->value < second_min)
-            second_min = current->value;
-        current = current->next;
-    }
-    return (second_min);
-}
-
 // 最小値と2番目の最小値を同時に見つける補助関数
 static void find_two_mins(t_stack *stack, int *min, int *second_min, int *min_pos, int *second_min_pos)
 {
