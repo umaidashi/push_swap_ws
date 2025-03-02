@@ -244,6 +244,19 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
             sa(stack_a, 1);
             pb(stack_a, stack_b, 1);
         }
+        // 最小値が最後にある場合は逆回転
+        else if (dist == stack_a->size - 1)
+        {
+            rra(stack_a, 1);
+            pb(stack_a, stack_b, 1);
+        }
+        // 最小値が後ろから2番目にある場合は逆回転2回
+        else if (dist == stack_a->size - 2)
+        {
+            rra(stack_a, 1);
+            rra(stack_a, 1);
+            pb(stack_a, stack_b, 1);
+        }
         // それ以外は最短経路で回転
         else if (dist <= stack_a->size / 2)
             ra(stack_a, 1);
