@@ -63,6 +63,8 @@ int     get_cost(int pos, int size);
 void    optimize_merge(t_stack *stack_a, t_stack *stack_b);
 int     get_stack_min(t_stack *stack);
 int     get_stack_max(t_stack *stack);
+int     get_next_max(t_stack *stack, int current_max);
+void    optimize_stack_b(t_stack *stack_b);
 
 // エラーハンドリング
 void    error_exit(void);
