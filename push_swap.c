@@ -202,7 +202,6 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
 {
     int size;
     int min;
-    int max;
     int dist;
     t_node *current;
 
@@ -333,9 +332,9 @@ void merge_stacks(t_stack *stack_a, t_stack *stack_b, int len_b)
     if (!is_reverse_sorted_range(stack_b, len_b))
     {
         // スタックBをソート
-        int min, max;
-        get_min_max(stack_b, len_b, &min, &max);
-        int mid = (min + max) / 2;
+        int min;
+        get_min_max(stack_b, len_b, &min, NULL);
+        int mid = (min + get_stack_max(stack_b)) / 2;
         int pushed = 0;
 
         // 大きい要素をスタックAに移動
