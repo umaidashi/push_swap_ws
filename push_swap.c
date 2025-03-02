@@ -504,7 +504,12 @@ void sort_stack(t_stack *stack_a, t_stack *stack_b)
         return;
     if (is_sorted_range(stack_a, stack_a->size))
         return;
-    improved_quick_sort(stack_a, stack_b, stack_a->size);
+    
+    // サイズに応じて適切なアルゴリズムを選択
+    if (stack_a->size <= 5)
+        sort_five_or_less(stack_a, stack_b);
+    else
+        chunk_sort(stack_a, stack_b);
 }
 
 #ifndef TESTING

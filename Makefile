@@ -2,7 +2,9 @@ NAME = push_swap
 
 SRCS = push_swap.c \
        stack_operations.c \
-       error_handling.c
+       error_handling.c \
+       index_conversion.c \
+       chunk_sort.c
 
 OBJS = $(SRCS:.c=.o)
 
