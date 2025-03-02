@@ -25,6 +25,69 @@ long	ft_atol(const char *str)
     return (result * sign);
 }
 
+// スタックの最小値と最大値を取得
+void get_min_max(t_stack *stack, int len, int *min, int *max)
+{
+    t_node *current;
+    int i;
+
+    *min = INT_MAX;
+    *max = INT_MIN;
+    current = stack->head;
+    i = 0;
+    while (i < len && current)
+    {
+        if (current->value < *min)
+            *min = current->value;
+        if (current->value > *max)
+            *max = current->value;
+        current = current->next;
+        i++;
+    }
+}
+
+// スタックの要素が昇順にソートされているかチェック
+int is_sorted_range(t_stack *stack, int len)
+{
+    t_node *current;
+    int i;
+
+    if (!stack || !stack->head || len <= 1)
+        return (1);
+    
+    current = stack->head;
+    i = 1;
+    while (i < len && current && current->next)
+    {
+        if (current->value > current->next->value)
+            return (0);
+        current = current->next;
+        i++;
+    }
+    return (1);
+}
+
+// スタックの要素が降順にソートされているかチェック
+int is_reverse_sorted_range(t_stack *stack, int len)
+{
+    t_node *current;
+    int i;
+
+    if (!stack || !stack->head || len <= 1)
+        return (1);
+    
+    current = stack->head;
+    i = 1;
+    while (i < len && current && current->next)
+    {
+        if (current->value < current->next->value)
+            return (0);
+        current = current->next;
+        i++;
+    }
+    return (1);
+}
+
 int get_stack_min(t_stack *stack)
 {
     t_node *current;
@@ -102,7 +165,6 @@ int get_median(t_stack *stack, int len)
     return (median);
 }
 
-// 3要素以下のスタックをソート
 void sort_three(t_stack *stack)
 {
     int first, second, third;
@@ -189,69 +251,6 @@ void sort_five_or_less(t_stack *stack_a, t_stack *stack_b)
             ra(stack_a, 1);
         }
     }
-}
-
-// スタックの最小値と最大値を取得
-void get_min_max(t_stack *stack, int len, int *min, int *max)
-{
-    t_node *current;
-    int i;
-
-    *min = INT_MAX;
-    *max = INT_MIN;
-    current = stack->head;
-    i = 0;
-    while (i < len && current)
-    {
-        if (current->value < *min)
-            *min = current->value;
-        if (current->value > *max)
-            *max = current->value;
-        current = current->next;
-        i++;
-    }
-}
-
-// スタックの要素が昇順にソートされているかチェック
-int is_sorted_range(t_stack *stack, int len)
-{
-    t_node *current;
-    int i;
-
-    if (!stack || !stack->head || len <= 1)
-        return (1);
-    
-    current = stack->head;
-    i = 1;
-    while (i < len && current && current->next)
-    {
-        if (current->value > current->next->value)
-            return (0);
-        current = current->next;
-        i++;
-    }
-    return (1);
-}
-
-// スタックの要素が降順にソートされているかチェック
-int is_reverse_sorted_range(t_stack *stack, int len)
-{
-    t_node *current;
-    int i;
-
-    if (!stack || !stack->head || len <= 1)
-        return (1);
-    
-    current = stack->head;
-    i = 1;
-    while (i < len && current && current->next)
-    {
-        if (current->value < current->next->value)
-            return (0);
-        current = current->next;
-        i++;
-    }
-    return (1);
 }
 
 // 改善されたピボット選択
